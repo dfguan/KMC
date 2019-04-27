@@ -642,7 +642,7 @@ bool CKMC<SIZE>::ProcessSmallKOptimization()
 		for (int i = 0; i < Params.n_readers; ++i)
 		{
 			Queues.binary_pack_queues[i] = new CBinaryPackQueue;
-			w_fastqs[i] = new CWFastqReader(Params, Queues, Queues.binary_pack_queues[i]);
+			w_fastqs[i] = new CWFastqReader(Params, Queues, Queues.binary_pack_queues[i], Queues.trim_n[i]);
 			gr1_1.push_back(thread(std::ref(*w_fastqs[i])));
 		}
 	}
@@ -808,7 +808,7 @@ template <unsigned SIZE> bool CKMC<SIZE>::Process()
 
 
 	// Create queues
-	Queues.input_files_queue = new CInputFilesQueue(Params.input_file_names);
+	Queues.input_files_queue = new CInputFilesQueue(Params.input_file_names, Params.trim_n);
 	Queues.part_queue = new CPartQueue(Params.n_readers);
 	Queues.bpq = new CBinPartQueue(Params.n_splitters);
 	Queues.bd = new CBinDesc;
@@ -857,7 +857,7 @@ template <unsigned SIZE> bool CKMC<SIZE>::Process()
 	w_stats_fastqs.resize(Params.n_readers);
 	for (int i = 0; i < Params.n_readers; ++i)
 	{
-		w_stats_fastqs[i] = new CWStatsFastqReader(Params, Queues,  Params.file_type == bam ? nullptr : Queues.binary_pack_queues[i]);
+		w_stats_fastqs[i] = new CWStatsFastqReader(Params, Queues,  Params.file_type == bam ? nullptr : Queues.binary_pack_queues[i], Queues.trim_n[i]);
 		gr0_1.push_back(thread(std::ref(*w_stats_fastqs[i])));
 	}	
 	thread bin_file_reader_th(std::ref(*w_bin_file_reader));
@@ -894,7 +894,7 @@ template <unsigned SIZE> bool CKMC<SIZE>::Process()
 	delete Queues.stats_part_queue;
 	Queues.stats_part_queue = nullptr;
 	delete Queues.input_files_queue;
-	Queues.input_files_queue = new CInputFilesQueue(Params.input_file_names);
+	Queues.input_files_queue = new CInputFilesQueue(Params.input_file_names, Params.trim_n);
 
 	heuristic_time.startTimer();
 	Queues.s_mapper->Init(stats);

@@ -154,7 +154,7 @@ class CWFastqReader {
 
 	input_type file_type;	
 	int kmer_len;
-
+	int trimn;
 public:
 	CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue);
 	~CWFastqReader();
@@ -177,6 +177,7 @@ class CWStatsFastqReader {
 	CStatsPartQueue *stats_part_queue;
 	input_type file_type;	
 	int kmer_len;
+	int trimn;
 	CBinaryPackQueue* binary_pack_queue;
 public:
 	CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue);

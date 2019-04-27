@@ -861,11 +861,27 @@ CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPack
 	part_queue = Queues.part_queue;
 	file_type = Params.file_type;
 	kmer_len = Params.p_k;
-
+	
 
 	fqr = nullptr;
 }
+//dg30 change
+CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue, int trimn)
+{
+	mm = Queues.mm;
+	pmm_fastq = Queues.pmm_fastq;
+	pmm_binary_file_reader = Queues.pmm_binary_file_reader;
+	//input_files_queue = Queues.input_files_queue;
+	binary_pack_queue = _binary_pack_queue;
+	bam_task_manager = Queues.bam_task_manager;
+	part_size = Params.fastq_buffer_size;
+	part_queue = Queues.part_queue;
+	file_type = Params.file_type;
+	kmer_len = Params.p_k;
+	trimn = trimn;	
 
+	fqr = nullptr;
+}
 //----------------------------------------------------------------------------------
 CWFastqReader::~CWFastqReader()
 {
@@ -887,7 +903,7 @@ void CWFastqReader::operator()()
 	{
 		fqr->Init();
 		while (fqr->GetPartNew(part, part_filled))
-			part_queue->push(part, part_filled);
+			part_queue->push(part, part_filled, trimn);
 	}
 	delete fqr;
 	part_queue->mark_completed();
@@ -914,7 +930,24 @@ CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, C
 
 	fqr = nullptr;
 }
+//dg30
+CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue, int trimn)
+{
+	mm = Queues.mm;
+	pmm_fastq = Queues.pmm_fastq;
+	pmm_binary_file_reader = Queues.pmm_binary_file_reader;
 
+	binary_pack_queue = _binary_pack_queue;
+	bam_task_manager = Queues.bam_task_manager;
+
+	part_size = Params.fastq_buffer_size;
+	stats_part_queue = Queues.stats_part_queue;
+	file_type = Params.file_type;
+	kmer_len = Params.p_k;
+	trimn = trimn;
+
+	fqr = nullptr;
+}
 //----------------------------------------------------------------------------------
 CWStatsFastqReader::~CWStatsFastqReader()
 {
@@ -938,7 +971,7 @@ void CWStatsFastqReader::operator()()
 		bool finished = false;
 		while (fqr->GetPartNew(part, part_filled) && !finished)
 		{
-			if (!stats_part_queue->push(part, part_filled))
+			if (!stats_part_queue->push(part, part_filled, trimn))
 			{
 				finished = true;
 				pmm_fastq->free(part);

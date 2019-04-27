@@ -154,7 +154,7 @@ struct CCheckParams
 class CConfig
 {
 public:	
-	enum class Mode { UNDEFINED, COMPLEX, COMPARE, FILTER, SIMPLE_SET, TRANSFORM, INFO, CHECK };
+	enum class Mode { UNDEFINED, COMPLEX, COMPARE, FILTER, SIMPLE_SET, TRANSFORM, INFO, CHECK, ANALYZE };
 	uint32 avaiable_threads;
 	uint32 kmer_len = 0;
 	Mode mode = Mode::UNDEFINED;
@@ -270,6 +270,7 @@ public:
 				  << "Available operations:\n"
 				  << "  transform            - transforms single KMC's database\n"
 				  << "  simple               - performs set operation on two KMC's databases\n"
+				  << "  analyze              - performs kmer comparision on two KMC's databases\n"
 				  << "  complex              - performs set operation on multiple KMC's databases\n"
 				  << "  filter               - filter out reads with too small number of k-mers\n"
 				  << " global parameters:\n"

@@ -67,7 +67,7 @@ void CSplitter::InitBins(CKMCParams &Params, CKMCQueues &Queues)
 
 //----------------------------------------------------------------------------------
 // Return a single record from FASTA/FASTQ data
-bool CSplitter::GetSeq(char *seq, uint32 &seq_size)
+bool CSplitter::GetSeq(char *seq, uint32 &seq_size, int trimn)
 {
 	uchar c = 0;
 	uint32 pos = 0;
@@ -86,6 +86,7 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size)
 			if (c < 32)					// newliners
 				break;
 		}
+		
 		if (part_pos >= part_size)
 			return false;
 
@@ -96,6 +97,7 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size)
 			return false;
 
 		// Sequence
+		part_pos += trimn;
 		for (; part_pos < part_size;)
 		{
 			c = part[part_pos++];
@@ -137,6 +139,7 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size)
 			return false;
 
 		// Sequence
+		part_pos += trimn;
 		for (; part_pos < part_size;)
 		{
 			c = part[part_pos++];
@@ -201,6 +204,7 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size)
 			if (part[part_pos] == '\n' || part[part_pos] == '\r')
 				++part_pos;
 		}
+		part_pos += trimn;
 		for (; part_pos < part_size && pos < mem_part_pmm_reads && part[part_pos] != '>';)
 		{
 			seq[pos++] = codes[part[part_pos++]];
@@ -409,7 +413,7 @@ void CSplitter::CalcStats(uchar* _part, uint64 _part_size, uint32* _stats)
 
 //----------------------------------------------------------------------------------
 // Process the reads from the given FASTQ file part
-bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size)
+bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size, int trimn)
 {
 	part = _part;
 	part_size = _part_size;
@@ -426,7 +430,7 @@ bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size)
 	uint32 i;
 	uint32 len;//length of extended kmer
 
-	while (GetSeq(seq, seq_size))
+	while (GetSeq(seq, seq_size, trimn))
 	{
 		if (file_type != multiline_fasta)
 			n_reads++;
@@ -703,9 +707,10 @@ void CWSplitter::operator()()
 	{
 		uchar *part;
 		uint64 size;
-		if (pq->pop(part, size))
+		int trimn;
+		if (pq->pop(part, size, trimn))
 		{
-			spl->ProcessReads(part, size);
+			spl->ProcessReads(part, size, trimn);
 			pmm_fastq->free(part);
 		}
 	}

@@ -106,7 +106,12 @@ public:
 
 //************************************************************************************************************
 class CInputFilesQueue {
-	typedef string elem_t;
+	//dg30
+	typedef struct {
+		string fn;
+		int    trimn;
+	} elem_t;
+	//typedef string elem_t;
 	typedef queue<elem_t, list<elem_t>> queue_t;
 
 	queue_t q;
@@ -119,6 +124,16 @@ public:
 	{
 		return q;
 	}
+
+	//dg30: constructor
+	CInputFilesQueue(const vector<string> &file_names, const vector<int> &trim_n) {
+		unique_lock<mutex> lck(mtx);
+
+		for (int i = 0; i < file_names.size(); ++i) 
+			q.push(elem_t{file_names[i], trim_n[i]});	
+		
+		is_completed = false;
+	};
 	CInputFilesQueue(const vector<string> &file_names) {
 		unique_lock<mutex> lck(mtx);
 
@@ -147,7 +162,19 @@ public:
 		if(q.empty())
 			return false;
 
-		file_name = q.front();
+		file_name = q.front().fn;
+		q.pop();
+
+		return true;
+	}
+	bool pop(string &file_name, int &trimn) {
+		lock_guard<mutex> lck(mtx);
+
+		if(q.empty())
+			return false;
+
+		file_name = q.front().first;
+		trimn = q.front().second;
 		q.pop();
 
 		return true;
@@ -156,7 +183,7 @@ public:
 
 //************************************************************************************************************
 class CPartQueue {
-	typedef pair<uchar *, uint64> elem_t;
+	typedef tuple<uchar *, uint64, int> elem_t;
 	typedef queue<elem_t, list<elem_t>> queue_t;
 
 	queue_t q;
@@ -188,16 +215,26 @@ public:
 		if(!n_readers)
 			cv_queue_empty.notify_all();
 	}
-	void push(uchar *part, uint64 size) {
+	//void push(uchar *part, uint64 size) {
+		//unique_lock<mutex> lck(mtx);
+		
+		//bool was_empty = q.empty();
+		//q.push(make_tuple(part, size));
+
+		//if(was_empty)
+			//cv_queue_empty.notify_all();
+	//}
+	//dg30 
+	void push(uchar *part, uint64 size, int trimn) {
 		unique_lock<mutex> lck(mtx);
 		
 		bool was_empty = q.empty();
-		q.push(make_pair(part, size));
+		q.push(make_tuple(part, size, trimn));
 
 		if(was_empty)
 			cv_queue_empty.notify_all();
 	}
-	bool pop(uchar *&part, uint64 &size) {
+	bool pop(uchar *&part, uint64 &size, int &trimn) {
 		unique_lock<mutex> lck(mtx);
 		cv_queue_empty.wait(lck, [this]{return !this->q.empty() || !this->n_readers;}); 
 
@@ -206,6 +243,7 @@ public:
 
 		part = q.front().first;
 		size = q.front().second;
+		trimn = q.front().third;
 		q.pop();
 
 		return true;
@@ -215,7 +253,7 @@ public:
 //************************************************************************************************************
 class CStatsPartQueue
 {
-	typedef pair<uchar *, uint64> elem_t;
+	typedef tuple<uchar *, uint64, int> elem_t;
 	typedef queue<elem_t, list<elem_t>> queue_t;
 
 	queue_t q;
@@ -246,14 +284,14 @@ public:
 		return q.empty() && !n_readers;
 	}
 
-	bool push(uchar *part, uint64 size) {
+	bool push(uchar *part, uint64 size,int trimn) {
 		unique_lock<mutex> lck(mtx);
 
 		if (bytes_to_read <= 0)
 			return false;
 
 		bool was_empty = q.empty();
-		q.push(make_pair(part, size));
+		q.push(make_tuple(part, size, trimn));
 		bytes_to_read -= size;
 		if (was_empty)
 			cv_queue_empty.notify_one();
@@ -261,7 +299,7 @@ public:
 		return true;
 	}
 
-	bool pop(uchar *&part, uint64 &size) {
+	bool pop(uchar *&part, uint64 &size, int& trimn) {
 		unique_lock<mutex> lck(mtx);
 		cv_queue_empty.wait(lck, [this]{return !this->q.empty() || !this->n_readers; });
 
@@ -270,6 +308,7 @@ public:
 
 		part = q.front().first;
 		size = q.front().second;
+		trimn = q.front().third;
 		q.pop();
 
 		return true;

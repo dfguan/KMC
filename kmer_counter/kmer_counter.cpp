@@ -366,30 +366,30 @@ bool parse_parameters(int argc, char *argv[])
 
 	if(argc - i < 3)
 		return false;
-
-	string input_file_name = string(argv[i++]);
+	//dg: modified
+	string input_file_list = string(argv[i++]);
 	Params.output_file_name = string(argv[i++]);
 	Params.working_directory = string(argv[i++]);
-
+	
 	Params.input_file_names.clear();
-	if(input_file_name[0] != '@')
-		Params.input_file_names.push_back(input_file_name);
-	else
+	
+	ifstream in(input_file_list.c_str()+1);
+	if(!in.good())
 	{
-		ifstream in(input_file_name.c_str()+1);
-		if(!in.good())
-		{
-			cerr << "Error: No " << input_file_name.c_str()+1 << " file\n";
-			return false;
-		}
-
+		cerr << "Error: No " << input_file_list.c_str()+1 << " file\n";
+		return false;
+	}
+	{
 		string s;
 		while(getline(in, s))
-			if(s != "")
-				Params.input_file_names.push_back(s);
-
+			if(s != "") {
+				//split by '\t'
+				uint32_t tab_p = s.find("\t");
+				Params.input_file_names.push_back(s.substr(0, tab_p));
+				if (tab_p == s.length()) 	Params.trim_n.push_back(0);
+				else Params.trim_n.push_back(std::stoi(s.substr(tab_p+1)))
+			}
 		in.close();
-		random_shuffle(Params.input_file_names.begin(), Params.input_file_names.end());
 	}
 
 	if (Params.p_t > Params.p_m * 64)

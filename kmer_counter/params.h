@@ -52,6 +52,7 @@ struct CKMCParams {
 
 	// File names
 	vector<string> input_file_names;
+	vector<int>   trim_n;
 	string output_file_name;
 	string working_directory;
 	input_type file_type;
