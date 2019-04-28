@@ -38,18 +38,20 @@ class CFastqReaderDataSrc
 	uchar* in_data;
 	uint64 in_data_size;
 	uint64 in_data_pos; //for plain
+	//int trimn;
 	void init_stream();
 public:
 	inline void SetQueue(CBinaryPackQueue* _binary_pack_queue, CMemoryPool *_pmm_binary_file_reader);
 	inline bool Finished();
-	uint64 read(uchar* buff, uint64 size);
+	uint64 read(uchar* buff, uint64 size, int &trimn);
 	void IgnoreRest()
 	{
 		if (in_data)
 			pmm_binary_file_reader->free(in_data);
 		in_data = nullptr;
 		//clean queue
-		while (binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type))
+		int trimn; //dg30: not useful 
+		while (binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn))
 		{
 			if(in_data_size)
 				pmm_binary_file_reader->free(in_data);
@@ -123,7 +125,7 @@ public:
 
 	bool GetPart(uchar *&_part, uint64 &_size);
 
-	bool GetPartNew(uchar *&_part, uint64 &_size);
+	bool GetPartNew(uchar *&_part, uint64 &_size, int &trimn);
 	void Init()
 	{
 		pmm_fastq->reserve(part);
@@ -154,7 +156,6 @@ class CWFastqReader {
 
 	input_type file_type;	
 	int kmer_len;
-	int trimn;
 public:
 	CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue);
 	~CWFastqReader();
@@ -177,9 +178,9 @@ class CWStatsFastqReader {
 	CStatsPartQueue *stats_part_queue;
 	input_type file_type;	
 	int kmer_len;
-	int trimn;
 	CBinaryPackQueue* binary_pack_queue;
 public:
+	//CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue);
 	CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue);
 	~CWStatsFastqReader();
 

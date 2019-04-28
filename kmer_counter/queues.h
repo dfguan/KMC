@@ -36,18 +36,18 @@ enum class FilePart { Begin, Middle, End };
 enum class CompressionType { plain, gzip, bzip2 };
 class CBinaryPackQueue
 {
-	std::queue<tuple<uchar*, uint64, FilePart, CompressionType>> q;
+	std::queue<tuple<uchar*, uint64, FilePart, CompressionType, int>> q;
 	std::mutex mtx;
 	std::condition_variable cv_pop, cv_push;
 	bool completed = false;
 	bool stop = false;
 public:
-	bool push(uchar* data, uint64 size, FilePart file_part, CompressionType mode)
+	bool push(uchar* data, uint64 size, FilePart file_part, CompressionType mode, int trimn)
 	{
 		std::lock_guard<std::mutex> lck(mtx);
 		if (stop)
 			return false;
-		q.emplace(data, size, file_part, mode);
+		q.emplace(data, size, file_part, mode, trimn);
 		if (q.size() == 1) //was empty
 			cv_pop.notify_all();
 		return true;
@@ -59,7 +59,7 @@ public:
 		completed = true;
 		cv_pop.notify_all();
 	}
-	bool pop(uchar* &data, uint64 &size, FilePart &file_part, CompressionType &mode)
+	bool pop(uchar* &data, uint64 &size, FilePart &file_part, CompressionType &mode, int &trimn)
 	{
 		std::unique_lock<std::mutex> lck(mtx);
 		cv_pop.wait(lck, [this]{return !q.empty() || completed; });
@@ -70,7 +70,7 @@ public:
 		size = get<1>(q.front());
 		file_part = get<2>(q.front());
 		mode = get<3>(q.front());
-
+		trimn = get<4>(q.front());
 		q.pop();
 		return true;
 	}
@@ -134,14 +134,6 @@ public:
 		
 		is_completed = false;
 	};
-	CInputFilesQueue(const vector<string> &file_names) {
-		unique_lock<mutex> lck(mtx);
-
-		for(vector<string>::const_iterator p = file_names.begin(); p != file_names.end(); ++p)
-			q.push(*p);
-
-		is_completed = false;
-	};
 	~CInputFilesQueue() {};
 
 	bool empty() {
@@ -156,25 +148,25 @@ public:
 		lock_guard<mutex> lck(mtx);
 		is_completed = true;
 	}
-	bool pop(string &file_name) {
-		lock_guard<mutex> lck(mtx);
+	//bool pop(string &file_name) {
+		//lock_guard<mutex> lck(mtx);
 
-		if(q.empty())
-			return false;
+		//if(q.empty())
+			//return false;
 
-		file_name = q.front().fn;
-		q.pop();
+		//file_name = q.front().fn;
+		//q.pop();
 
-		return true;
-	}
+		//return true;
+	//}
 	bool pop(string &file_name, int &trimn) {
 		lock_guard<mutex> lck(mtx);
 
 		if(q.empty())
 			return false;
 
-		file_name = q.front().first;
-		trimn = q.front().second;
+		file_name = q.front().fn;
+		trimn = q.front().trimn;
 		q.pop();
 
 		return true;
@@ -241,9 +233,9 @@ public:
 		if(q.empty())
 			return false;
 
-		part = q.front().first;
-		size = q.front().second;
-		trimn = q.front().third;
+		part = std::get<0>(q.front());
+		size = std::get<1>(q.front());
+		trimn = std::get<2>(q.front());
 		q.pop();
 
 		return true;
@@ -306,9 +298,9 @@ public:
 		if (q.empty())
 			return false;
 
-		part = q.front().first;
-		size = q.front().second;
-		trimn = q.front().third;
+		part = std::get<0>(q.front());
+		size = std::get<1>(q.front());
+		trimn = std::get<2>(q.front());
 		q.pop();
 
 		return true;

@@ -46,6 +46,7 @@ protected:
 
 };
 
+template<unsigned SIZE> class CAnalyzeOperation; 
 template<unsigned SIZE> class CSimpleOperation; 
 template<unsigned SIZE> class CKMC1DbReader; 
 template<unsigned SIZE> class CMergerParent;
@@ -154,6 +155,7 @@ public:
 
 private:
 	friend class CKMC1DbReader<SIZE>; //improve performance, but CKMC1DbReader takes responsibility for CBundleData state!
+	friend class CAnalyzeOperation<SIZE>; //improve performance
 	friend class CSimpleOperation<SIZE>; //as above
 	friend class CMergerParent<SIZE>;
 	friend class CMergerParentSubthread<SIZE>;
@@ -235,6 +237,7 @@ public:
 	
 protected:
 	friend class CSimpleOperation<SIZE>; //improve performance
+	friend class CAnalyzeOperation<SIZE>; //improve performance
 	CBundleData<SIZE> data;
 	CInput<SIZE>* input;
 	bool finished = false;

@@ -178,12 +178,13 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size, int trimn)
 			return false;
 
 		// Quality
-		part_pos += pos;
+		part_pos += pos + trimn;
 		if (part_pos >= part_size)
 			return false;
 		c = part[part_pos++];
 		seq_size = pos;
 
+		//cerr << "fastq_reader\t"<<seq_size << "\t" << trimn << "\t" << part_size << endl;
 		if (part_pos >= part_size)
 			return true;
 
@@ -313,7 +314,7 @@ bool CSplitter::GetSeq(char *seq, uint32 &seq_size, int trimn)
 
 //----------------------------------------------------------------------------------
 // Calculate statistics of m-mers
-void CSplitter::CalcStats(uchar* _part, uint64 _part_size, uint32* _stats)
+void CSplitter::CalcStats(uchar* _part, uint64 _part_size, uint32* _stats, int trimn)
 {
 	part = _part;
 	part_size = _part_size;
@@ -328,8 +329,7 @@ void CSplitter::CalcStats(uchar* _part, uint64 _part_size, uint32* _stats)
 
 	uint32 i;
 	uint32 len;//length of extended kmer
-
-	while (GetSeq(seq, seq_size))
+	while (GetSeq(seq, seq_size, trimn))
 	{
 		i = 0;
 		len = 0;
@@ -410,7 +410,13 @@ void CSplitter::CalcStats(uchar* _part, uint64 _part_size, uint32* _stats)
 
 	pmm_reads->free(seq);
 }
-
+bool CSplitter::output(uchar *_part, uint64_t _part_size, int trimn)
+{
+	std::lock_guard<std::mutex> guard(g_disp);
+	cerr << _part << endl;
+	cerr<<"part_size\t"<< _part_size <<"\t" <<  trimn << endl; 
+	return true;
+}
 //----------------------------------------------------------------------------------
 // Process the reads from the given FASTQ file part
 bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size, int trimn)
@@ -429,9 +435,14 @@ bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size, int trimn)
 
 	uint32 i;
 	uint32 len;//length of extended kmer
+	//char transfer[] = {'A','C','G', 'T'};
+	//output(_part, _part_size, trimn);
 
 	while (GetSeq(seq, seq_size, trimn))
 	{
+		//for (int z = 0; z < seq_size; ++z) 
+			//cerr << (seq[i] < 0 ? 'N' : transfer[seq[z]]) ;
+		//cerr << "\t" << seq_size << "\t" << trimn << endl;
 		if (file_type != multiline_fasta)
 			n_reads++;
 		i = 0;
@@ -537,7 +548,7 @@ bool CSplitter::ProcessReads(uchar *_part, uint64 _part_size, int trimn)
 //----------------------------------------------------------------------------------
 // Process the reads from the given FASTQ file part in small k optimization mode
 template<typename COUNTER_TYPE>
-bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<COUNTER_TYPE>& small_k_buf)
+bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<COUNTER_TYPE>& small_k_buf, int trimn)
 {
 	part = _part;
 	part_size = _part_size;
@@ -555,7 +566,7 @@ bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<C
 	uint32 kmer_len_shift = (kmer_len - 1) * 2;
 
 	if (both_strands)
-		while (GetSeq(seq, seq_size))
+		while (GetSeq(seq, seq_size, trimn))
 		{
 			if (file_type != multiline_fasta)
 				n_reads++;
@@ -608,7 +619,7 @@ bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<C
 			}
 		}
 	else
-		while (GetSeq(seq, seq_size))
+		while (GetSeq(seq, seq_size, trimn))
 		{
 			if (file_type != multiline_fasta)
 				n_reads++;
@@ -775,9 +786,10 @@ void CWStatsSplitter::operator()()
 	{
 		uchar *part;
 		uint64 size;
-		if (spq->pop(part, size))
+		int trimn;
+		if (spq->pop(part, size, trimn))
 		{
-			spl->CalcStats(part, size, stats);
+			spl->CalcStats(part, size, stats, trimn);
 			pmm_fastq->free(part);
 		}
 	}
@@ -829,10 +841,10 @@ template <typename COUNTER_TYPE> void CWSmallKSplitter<COUNTER_TYPE>::operator()
 	{
 		uchar *part;
 		uint64 size;
-
-		if (pq->pop(part, size))
+		int trimn;
+		if (pq->pop(part, size, trimn))
 		{
-			spl->ProcessReadsSmallK(part, size, small_k_buf);
+			spl->ProcessReadsSmallK(part, size, small_k_buf, trimn);
 			pmm_fastq->free(part);
 		}
 	}
@@ -854,8 +866,8 @@ template <typename COUNTER_TYPE> void CWSmallKSplitter<COUNTER_TYPE>::GetTotal(u
 }
 
 //instantiate some templates
-template bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<uint32>& small_k_buf);
-template bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<uint64>& small_k_buf);
+template bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<uint32>& small_k_buf, int trimn);
+template bool CSplitter::ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<uint64>& small_k_buf, int trimn);
 template class CWSmallKSplitter<uint32>;
 template class CWSmallKSplitter<uint64>;
 

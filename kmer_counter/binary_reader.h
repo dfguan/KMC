@@ -209,9 +209,10 @@ class CBinaryFilesReader
 		uint32 file_no = 0;
 		uint32 id = 0;
 		string fname;
+		int trimn;
 		bool forced_to_finish = false;
 		
-		while (!forced_to_finish && input_files_queue->pop(fname))
+		while (!forced_to_finish && input_files_queue->pop(fname, trimn))
 		{
 			ProcessSingleBamFile(fname, file_no, id, forced_to_finish);
 			++file_no;
@@ -236,7 +237,7 @@ public:
 
 		while (!files_copy.empty())
 		{
-			string& f_name = files_copy.front();
+			string& f_name = files_copy.front().fn;
 			FILE* f = fopen(f_name.c_str(), "rb");
 			if(!is_file(f_name.c_str()))
 			{
@@ -294,24 +295,25 @@ public:
 			return;
 		}
 		std::string file_name;
-		vector<tuple<FILE*, CBinaryPackQueue*, CompressionType>> files;
+		int trimn;
+		vector<tuple<FILE*, CBinaryPackQueue*, CompressionType, int>> files;
 		files.reserve(binary_pack_queues.size());
 		uchar* part = nullptr;
 
 		uint32 completed = 0;
 		notify_readed(0);
 
-		for (uint32 i = 0; i < binary_pack_queues.size() && input_files_queue->pop(file_name); ++i)
+		for (uint32 i = 0; i < binary_pack_queues.size() && input_files_queue->pop(file_name, trimn); ++i)
 		{
 			CBinaryPackQueue* q = binary_pack_queues[i];
 			CompressionType mode;
 			FILE* f = nullptr;
 			OpenFile(file_name, f, mode);
-			files.push_back(make_tuple(f, q, mode));
+			files.push_back(make_tuple(f, q, mode, trimn));
 			pmm_binary_file_reader->reserve(part);			
 			uint64 readed = fread(part, 1, part_size, f);		
 			notify_readed(readed);
-			if (!q->push(part, readed, FilePart::Begin, mode))
+			if (!q->push(part, readed, FilePart::Begin, mode, trimn))
 			{
 				pmm_binary_file_reader->free(part);
 				fclose(f);
@@ -335,20 +337,20 @@ public:
 				if (readed == 0) //end of file, need to open next one if exists
 				{
 					pmm_binary_file_reader->free(part);
-					if (!get<1>(f)->push(nullptr, 0, FilePart::End, get<2>(f)))
+					if (!get<1>(f)->push(nullptr, 0, FilePart::End, get<2>(f), get<3>(f)))
 					{
 						forced_to_finish = true;
 						break;
 					}
 					fclose(get<0>(f));
-
-					if (input_files_queue->pop(file_name))
+					if (input_files_queue->pop(file_name, trimn))
 					{
 						OpenFile(file_name, get<0>(f), get<2>(f));
+						get<3>(f) = trimn;
 						pmm_binary_file_reader->reserve(part);
 						readed = fread(part, 1, part_size, get<0>(f));
 						notify_readed(readed);
-						if (!get<1>(f)->push(part, readed, FilePart::Begin, get<2>(f)))
+						if (!get<1>(f)->push(part, readed, FilePart::Begin, get<2>(f), get<3>(f)))
 						{
 							pmm_binary_file_reader->free(part);
 							forced_to_finish = true;
@@ -364,7 +366,7 @@ public:
 				}
 				else
 				{
-					if (!get<1>(f)->push(part, readed, FilePart::Middle, get<2>(f)))
+					if (!get<1>(f)->push(part, readed, FilePart::Middle, get<2>(f), get<3>(f)))
 					{
 						pmm_binary_file_reader->free(part);
 						forced_to_finish = true;

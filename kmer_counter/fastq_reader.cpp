@@ -235,11 +235,11 @@ void CFastqReader::PreparePartForSplitter(uchar* data, uint64 size, uint32 /*id*
 
 		if (part_queue)
 		{
-			part_queue->push(state.prev_part_data, state.prev_part_size);
+			part_queue->push(state.prev_part_data, state.prev_part_size, 0);
 		}
 		else if (stats_part_queue)
 		{
-			if (!stats_part_queue->push(state.prev_part_data, state.prev_part_size))
+			if (!stats_part_queue->push(state.prev_part_data, state.prev_part_size, 0))
 			{
 				pmm_fastq->free(state.prev_part_data);
 				pmm_fastq->free(data);
@@ -273,11 +273,11 @@ void CFastqReader::PreparePartForSplitter(uchar* data, uint64 size, uint32 /*id*
 
 			if (part_queue)
 			{
-				part_queue->push(data, size);
+				part_queue->push(data, size, 0);
 			}
 			else if (stats_part_queue)
 			{
-				if (!stats_part_queue->push(data, size))
+				if (!stats_part_queue->push(data, size, 0))
 				{
 					pmm_fastq->free(data);
 					bam_task_manager->IgnoreRest(pmm_fastq, pmm_binary_file_reader);
@@ -317,11 +317,11 @@ void CFastqReader::PreparePartForSplitter(uchar* data, uint64 size, uint32 /*id*
 			state.prev_part_size = size - bpos;
 			if (part_queue)
 			{
-				part_queue->push(data, bpos);
+				part_queue->push(data, bpos, 0);
 			}
 			else if (stats_part_queue)
 			{
-				if (!stats_part_queue->push(data, bpos))
+				if (!stats_part_queue->push(data, bpos, 0))
 				{
 					pmm_fastq->free(data);
 					pmm_fastq->free(state.prev_part_data);
@@ -379,14 +379,14 @@ void CFastqReader::ProcessBam()
 bool CFastqReader::GetPartFromMultilneFasta(uchar *&_part, uint64 &_size)
 {
 	uint64 readed = 0;
-
+	int trimn;
 	if (!containsNextChromosome)
 	{
 		if (data_src.Finished())
 			return false;
 	}
 
-	readed = data_src.read(part + part_filled, part_size - part_filled);
+	readed = data_src.read(part + part_filled, part_size - part_filled, trimn);
 
 	int64 total_filled = part_filled + readed;
 	int64 last_header_pos = 0;
@@ -433,7 +433,7 @@ bool CFastqReader::GetPartFromMultilneFasta(uchar *&_part, uint64 &_size)
 	return true;
 }
 
-bool CFastqReader::GetPartNew(uchar *&_part, uint64 &_size)
+bool CFastqReader::GetPartNew(uchar *&_part, uint64 &_size, int &trimn)
 {
 	if (file_type == multiline_fasta)
 		return GetPartFromMultilneFasta(_part, _size);
@@ -443,7 +443,7 @@ bool CFastqReader::GetPartNew(uchar *&_part, uint64 &_size)
 	uint64 readed;
 
 	// Read data
-	readed = data_src.read(part + part_filled, part_size - part_filled);
+	readed = data_src.read(part + part_filled, part_size - part_filled, trimn);
 
 	//std::cerr.write((char*)part + part_filled, readed);
 
@@ -645,11 +645,11 @@ bool CFastqReaderDataSrc::Finished()
 }
 
 //----------------------------------------------------------------------------------
-uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
+uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size, int &trimn)
 {
 	if (!in_progress)
 	{
-		if (!binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type))
+		if (!binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn))
 		{
 			end_reached = true;
 			return 0;
@@ -670,7 +670,7 @@ uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
 			{
 				pmm_binary_file_reader->free(in_data);
 				in_data = nullptr;
-				if (!binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type))
+				if (!binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn))
 					return 0;
 				stream.avail_in = (uint32)in_data_size;
 				stream.next_in = in_data;
@@ -730,7 +730,7 @@ uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
 					inflateEnd(&stream);
 					in_progress = false;
 					//pull end
-					bool queue_end = !binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type);
+					bool queue_end = !binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn);
 					if (!queue_end && file_part != FilePart::End && !garbage)
 					{
 						cerr << "Error: An internal error occurred. Please contact authors\n";
@@ -769,7 +769,7 @@ uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
 			{
 				pmm_binary_file_reader->free(in_data);
 				in_data = nullptr;
-				binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type);
+				binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn);
 				_bz_stram.avail_in = (uint32)in_data_size;
 				_bz_stram.next_in = (char*)in_data;
 			}
@@ -789,7 +789,7 @@ uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
 					BZ2_bzDecompressEnd(&_bz_stram);
 					in_progress = false;
 					//pull end
-					bool queue_end = !binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type);
+					bool queue_end = !binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn);
 					if (!queue_end && file_part != FilePart::End)
 					{
 						cerr << "Error: An internal error occurred. Please contact authors\n";
@@ -819,7 +819,7 @@ uint64 CFastqReaderDataSrc::read(uchar* buff, uint64 size)
 			{
 				pmm_binary_file_reader->free(in_data);
 				in_data = nullptr;
-				binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type);
+				binary_pack_queue->pop(in_data, in_data_size, file_part, compression_type, trimn);
 				if (file_part == FilePart::End)
 				{
 					in_progress = false;
@@ -854,7 +854,6 @@ CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPack
 	mm = Queues.mm;
 	pmm_fastq = Queues.pmm_fastq;
 	pmm_binary_file_reader = Queues.pmm_binary_file_reader;
-	//input_files_queue = Queues.input_files_queue;
 	binary_pack_queue = _binary_pack_queue;
 	bam_task_manager = Queues.bam_task_manager;
 	part_size = Params.fastq_buffer_size;
@@ -866,22 +865,21 @@ CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPack
 	fqr = nullptr;
 }
 //dg30 change
-CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue, int trimn)
-{
-	mm = Queues.mm;
-	pmm_fastq = Queues.pmm_fastq;
-	pmm_binary_file_reader = Queues.pmm_binary_file_reader;
-	//input_files_queue = Queues.input_files_queue;
-	binary_pack_queue = _binary_pack_queue;
-	bam_task_manager = Queues.bam_task_manager;
-	part_size = Params.fastq_buffer_size;
-	part_queue = Queues.part_queue;
-	file_type = Params.file_type;
-	kmer_len = Params.p_k;
-	trimn = trimn;	
+//CWFastqReader::CWFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue, int _trimn)
+//{
+	//mm = Queues.mm;
+	//pmm_fastq = Queues.pmm_fastq;
+	//pmm_binary_file_reader = Queues.pmm_binary_file_reader;
+	//binary_pack_queue = _binary_pack_queue;
+	//bam_task_manager = Queues.bam_task_manager;
+	//part_size = Params.fastq_buffer_size;
+	//part_queue = Queues.part_queue;
+	//file_type = Params.file_type;
+	//kmer_len = Params.p_k;
+	//trimn = _trimn;	
 
-	fqr = nullptr;
-}
+	//fqr = nullptr;
+//}
 //----------------------------------------------------------------------------------
 CWFastqReader::~CWFastqReader()
 {
@@ -892,7 +890,7 @@ void CWFastqReader::operator()()
 {
 	uchar *part;
 	uint64 part_filled;
-
+	int trimn;
 	fqr = new CFastqReader(mm, pmm_fastq, file_type, kmer_len, binary_pack_queue, pmm_binary_file_reader, bam_task_manager, part_queue, nullptr);
 	fqr->SetPartSize(part_size);
 	if (file_type == bam)
@@ -902,7 +900,7 @@ void CWFastqReader::operator()()
 	else
 	{
 		fqr->Init();
-		while (fqr->GetPartNew(part, part_filled))
+		while (fqr->GetPartNew(part, part_filled, trimn))
 			part_queue->push(part, part_filled, trimn);
 	}
 	delete fqr;
@@ -914,6 +912,23 @@ void CWFastqReader::operator()()
 //************************************************************************************************************
 // CWStatsFastqReader - wrapper for multithreading purposes
 //************************************************************************************************************
+//CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue)
+//{
+	//mm = Queues.mm;
+	//pmm_fastq = Queues.pmm_fastq;
+	//pmm_binary_file_reader = Queues.pmm_binary_file_reader;
+
+	//binary_pack_queue = _binary_pack_queue;
+	//bam_task_manager = Queues.bam_task_manager;
+
+	//part_size = Params.fastq_buffer_size;
+	//stats_part_queue = Queues.stats_part_queue;
+	//file_type = Params.file_type;
+	//kmer_len = Params.p_k;
+
+	//fqr = nullptr;
+//}
+//dg30
 CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue)
 {
 	mm = Queues.mm;
@@ -930,24 +945,6 @@ CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, C
 
 	fqr = nullptr;
 }
-//dg30
-CWStatsFastqReader::CWStatsFastqReader(CKMCParams &Params, CKMCQueues &Queues, CBinaryPackQueue* _binary_pack_queue, int trimn)
-{
-	mm = Queues.mm;
-	pmm_fastq = Queues.pmm_fastq;
-	pmm_binary_file_reader = Queues.pmm_binary_file_reader;
-
-	binary_pack_queue = _binary_pack_queue;
-	bam_task_manager = Queues.bam_task_manager;
-
-	part_size = Params.fastq_buffer_size;
-	stats_part_queue = Queues.stats_part_queue;
-	file_type = Params.file_type;
-	kmer_len = Params.p_k;
-	trimn = trimn;
-
-	fqr = nullptr;
-}
 //----------------------------------------------------------------------------------
 CWStatsFastqReader::~CWStatsFastqReader()
 {
@@ -958,7 +955,7 @@ void CWStatsFastqReader::operator()()
 {
 	uchar *part;
 	uint64 part_filled;
-
+	int trimn;
 	fqr = new CFastqReader(mm, pmm_fastq, file_type, kmer_len, binary_pack_queue, pmm_binary_file_reader, bam_task_manager, nullptr, stats_part_queue);
 	fqr->SetPartSize(part_size);
 	if (file_type == bam)
@@ -969,7 +966,7 @@ void CWStatsFastqReader::operator()()
 	{
 		fqr->Init();
 		bool finished = false;
-		while (fqr->GetPartNew(part, part_filled) && !finished)
+		while (fqr->GetPartNew(part, part_filled, trimn) && !finished)
 		{
 			if (!stats_part_queue->push(part, part_filled, trimn))
 			{

@@ -145,8 +145,7 @@ void usage()
 		 << "Usage:\n kmc [options] <input_file_name> <output_file_name> <working_directory>\n"
 		 << " kmc [options] <@input_file_names> <output_file_name> <working_directory>\n"
 		 << "Parameters:\n"
-		 << "  input_file_name - single file in specified (-f switch) format (gziped or not)\n"
-		 << "  @input_file_names - file name with list of input files in specified (-f switch) format (gziped or not)\n"
+		 << "  input_file_list - file name with list of input files in specified (-f switch) format (gziped or not)\n"
 		 << "Options:\n"
 		 << "  -v - verbose mode (shows all parameter settings); default: false\n"
 		 << "  -k<len> - k-mer length (k from " << MIN_K << " to " << MAX_K << "; default: 25)\n"
@@ -167,8 +166,7 @@ void usage()
 		 << "  -j<file_name> - file name with execution summary in JSON format\n"
 		 << "  -w - without output\n"
 		 << "Example:\n"
-		 << "kmc -k27 -m24 NA19238.fastq NA.res /data/kmc_tmp_dir/\n"
-	     << "kmc -k27 -m24 @files.lst NA.res /data/kmc_tmp_dir/\n";
+	     << "kmc -k27 -m24 files.lst NA.res /data/kmc_tmp_dir/\n";
 }
 
 bool CanCreateFile(const string& path)
@@ -373,10 +371,10 @@ bool parse_parameters(int argc, char *argv[])
 	
 	Params.input_file_names.clear();
 	
-	ifstream in(input_file_list.c_str()+1);
+	ifstream in(input_file_list.c_str());
 	if(!in.good())
 	{
-		cerr << "Error: No " << input_file_list.c_str()+1 << " file\n";
+		cerr << "Error: No " << input_file_list.c_str() << " file\n";
 		return false;
 	}
 	{
@@ -384,10 +382,16 @@ bool parse_parameters(int argc, char *argv[])
 		while(getline(in, s))
 			if(s != "") {
 				//split by '\t'
-				uint32_t tab_p = s.find("\t");
-				Params.input_file_names.push_back(s.substr(0, tab_p));
-				if (tab_p == s.length()) 	Params.trim_n.push_back(0);
-				else Params.trim_n.push_back(std::stoi(s.substr(tab_p+1)))
+				size_t tab_p = s.find("\t");
+				if (tab_p == string::npos) {
+					Params.input_file_names.push_back(s.substr(0));
+					Params.trim_n.push_back(0);
+					//cerr << s<< endl;
+				} else {
+					cerr<<s.substr(0, tab_p) << s.substr(tab_p+1) << endl;	
+					Params.input_file_names.push_back(s.substr(0, tab_p));
+					Params.trim_n.push_back(std::stoi(s.substr(tab_p+1)));
+				}
 			}
 		in.close();
 	}

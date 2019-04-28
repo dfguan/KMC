@@ -236,6 +236,15 @@ void CParametersParser::read_check_params()
 	config.check_params.kmer = argv[pos++];
 }
 
+void CParametersParser::read_output_for_analyze()
+{
+	if (pos >= argc)
+	{
+		cerr << "Error: Output path missed\n";
+		exit(1);
+	}
+	config.analyze_output = argv[pos];
+}
 void CParametersParser::read_input_desc()
 {
 	if (pos >= argc)
@@ -592,6 +601,10 @@ void CParametersParser::Parse()
 	{
 		config.mode = CConfig::Mode::CHECK;
 	}
+	else if (strcmp(argv[pos], "analyze") == 0)
+	{
+		config.mode = CConfig::Mode::ANALYZE;
+	}
 	else
 	{
 		cerr << "Error: Unknow mode: " << argv[pos] << "\n";
@@ -669,6 +682,12 @@ void CParametersParser::Parse()
 	{
 		read_input_desc();
 		read_input_desc();
+	}
+	else if (config.mode == CConfig::Mode::ANALYZE)
+	{
+		read_input_desc();
+		read_input_desc();
+		read_output_for_analyze();
 	}
 }
 

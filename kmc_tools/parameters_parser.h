@@ -26,6 +26,7 @@ class CParametersParser
 	void parse_int_or_float(bool& force_float, bool& force_int, float& float_value, uint32& int_val, const char* param_name);
 	void parse_global_params();
 	void read_input_fastq_desc();
+	void read_output_for_analyze();
 	void read_output_fastq_desc();
 	void read_input_desc();
 	void read_check_params();

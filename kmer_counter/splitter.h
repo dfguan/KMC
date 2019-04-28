@@ -43,7 +43,7 @@ class CSplitter {
 	char codes[256];
 	input_type file_type;
 	bool both_strands;
-
+	std::mutex g_disp;
 	uint32 kmer_len;
 	//uint32 prefix_len;
 	uint32 signature_len;
@@ -52,17 +52,18 @@ class CSplitter {
 
 	CSignatureMapper* s_mapper;
 
-	bool GetSeq(char *seq, uint32 &seq_size);
+	bool GetSeq(char *seq, uint32 &seq_size, int trimn);
 
 public:
 	static uint32 MAX_LINE_SIZE;
 
 	
+	bool output(uchar *_part, uint64_t _part_size, int trimn);
 	CSplitter(CKMCParams &Params, CKMCQueues &Queues); 
 	void InitBins(CKMCParams &Params, CKMCQueues &Queues);	
-	void CalcStats(uchar* _part, uint64 _part_size, uint32* _stats);
-	bool ProcessReads(uchar *_part, uint64 _part_size);
-	template<typename COUNTER_TYPE> bool ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<COUNTER_TYPE>& small_k_buf);	
+	void CalcStats(uchar* _part, uint64 _part_size, uint32* _stats, int trimn);
+	bool ProcessReads(uchar *_part, uint64 _part_size, int trimn);
+	template<typename COUNTER_TYPE> bool ProcessReadsSmallK(uchar *_part, uint64 _part_size, CSmallKBuf<COUNTER_TYPE>& small_k_buf, int trimn);	
 	void Complete();
 	inline void GetTotal(uint64 &_n_reads);
 	inline uint64 GetTotalKmers();

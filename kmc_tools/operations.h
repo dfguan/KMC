@@ -295,6 +295,187 @@ public:
 };
 
 template<unsigned SIZE>
+class CAnalyzeOperation
+{
+	CBundle<SIZE> *input1, *input2;
+	uint64_t* occ_cnts;	
+	uint32_t max_cov;
+	uint32_t max_cov_asm;	
+	std::string output_fn;	
+	void process_impl()
+	{
+		uint32 get1 = 0;
+		uint32 get2 = 0;
+
+		CKmer<SIZE> kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
+		uint32 counter2 = this->input2->data.kmers_with_counters[get2].counter;
+		CKmer<SIZE> kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
+		uint32 counter1 = this->input1->data.kmers_with_counters[get1].counter;
+
+		uint32 left1 = this->input1->NRecLeft();
+		uint32 left2 = this->input2->NRecLeft();
+		
+		while (true)
+		{
+			if (kmer1 == kmer2)
+			{
+				uint32_t idx = counter1 >= max_cov ?  max_cov * (max_cov_asm + 1): counter1 * (max_cov_asm + 1);
+				uint32_t idx_rmd = counter2 >=  max_cov_asm? max_cov_asm : counter2; 
+				occ_cnts[idx + idx_rmd] += 1;
+				++get1;
+				++get2;
+				
+				if (--left1)
+				{
+
+					kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
+					counter1 = this->input1->data.kmers_with_counters[get1].counter;
+				}
+				else
+				{
+					this->input1->data.get_pos = get1;
+					if (this->input1->Finished())
+					{
+						get1 = 0;
+						kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
+						counter1 = this->input1->data.kmers_with_counters[get1].counter;
+						left1 = this->input1->NRecLeft();
+					}
+					else
+						break;
+				}
+
+				if (--left2)
+				{
+					kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
+					counter2 = this->input2->data.kmers_with_counters[get2].counter;
+				}
+				else
+				{
+					this->input2->data.get_pos = get2;
+					if (!this->input2->Finished())
+					{
+						get2 = 0;
+						kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
+						counter2 = this->input2->data.kmers_with_counters[get2].counter;
+						left2 = this->input2->NRecLeft();
+					}
+					else
+						break;
+				}
+			}
+			else if (kmer1 < kmer2)
+			{
+				uint32_t idx = counter1 >= max_cov ?  (max_cov)* (max_cov_asm + 1): (counter1) * (max_cov_asm + 1);
+				uint32_t idx_rmd = 0; 
+				occ_cnts[idx + idx_rmd] += 1;
+				
+				++get1;
+				if (--left1)
+				{
+					kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
+					counter1 = this->input1->data.kmers_with_counters[get1].counter;
+				}
+				else
+				{
+					this->input1->data.get_pos = get1;
+					if (this->input1->Finished())
+					{
+						get1 = 0;
+						kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
+						counter1 = this->input1->data.kmers_with_counters[get1].counter;
+						left1 = this->input1->NRecLeft();
+					}
+					else
+						break;
+				}
+			}
+			else
+			{
+				uint32_t idx = 0;
+				uint32_t idx_rmd = counter2 >=  max_cov_asm? max_cov_asm : counter2 ; 
+				occ_cnts[idx + idx_rmd] += 1;
+				
+				++get2;
+				if (--left2)
+				{
+					kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
+					counter2 = this->input2->data.kmers_with_counters[get2].counter;
+				}
+				else
+				{
+					this->input2->data.get_pos = get2;
+					if (!this->input2->Finished())
+					{
+						get2 = 0;
+						kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
+						counter2 = this->input2->data.kmers_with_counters[get2].counter;
+						left2 = this->input2->NRecLeft();
+
+					}
+					else
+						break;
+				}
+			}
+		}
+		this->input1->data.get_pos = get1;
+		this->input2->data.get_pos = get2;
+	}	
+		
+	public:
+		CAnalyzeOperation(CBundle<SIZE> *_input1, CBundle<SIZE> *_input2, uint32_t _mc, uint32_t _mca, std::string fn): input1(_input1), input2(_input2), max_cov(_mc), max_cov_asm(_mca), output_fn(fn) {
+			occ_cnts = new uint64_t[(max_cov + 1)* (max_cov_asm + 1)];
+			memset(occ_cnts, 0, sizeof(uint64_t) * (max_cov+1) * (max_cov_asm+1));	
+		}
+		void Process()	
+		{
+			if (!this->input1->Finished() && !this->input2->Finished()) 
+				process_impl();
+			if (!this->input1->Finished()) {
+				CKmer<SIZE> kmer1;
+				uint32 counter1;
+				while (!this->input1->Finished())
+				{
+					kmer1 = this->input1->TopKmer();
+					counter1 = this->input1->TopCounter();
+					uint32_t idx = counter1 >= max_cov ?  max_cov * ( 1 + max_cov_asm): (counter1) * (max_cov_asm + 1);
+					uint32_t idx_rmd = 0; 
+					occ_cnts[idx + idx_rmd] += 1;
+					this->input1->Pop();
+				}
+			}	
+			if (!this->input2->Finished()) {
+				CKmer<SIZE> kmer2;
+				uint32 counter2;
+				while (!this->input2->Finished())
+				{
+					kmer2 = this->input1->TopKmer();
+					counter2 = this->input1->TopCounter();
+					uint32_t idx = 0;
+					uint32_t idx_rmd = counter2 >=  max_cov_asm? max_cov_asm : counter2; 
+					occ_cnts[idx + idx_rmd] += 1;
+					this->input2->Pop();
+				}
+			}
+			FILE *fp = fopen(output_fn.c_str(), "w");
+			for ( int i = 0; i <= max_cov; ++i) {
+				uint32_t idx = i * (max_cov_asm + 1);
+				fprintf(fp, "%d\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", i, occ_cnts[idx], occ_cnts[idx+1], occ_cnts[idx+2], occ_cnts[idx+3], occ_cnts[idx+4], occ_cnts[idx+5], occ_cnts[idx+6]);
+				//std::cout << i;
+				//for (int j = 0; j <= max_cov_asm; ++j) 
+					//std::cout << '\t' << occ_cnts[idx + j];
+				//std::cout << '\n';	
+			}	
+			fclose(fp);
+		}	
+		~CAnalyzeOperation() {
+			free(occ_cnts);
+		}
+
+};
+
+
+template<unsigned SIZE>
 class CSimpleOperation
 {
 	CBundle<SIZE>* input1, *input2;
