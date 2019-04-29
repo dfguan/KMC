@@ -33,14 +33,22 @@ def spectra_plot(input_fl, out_fl, title):
     peakx = findpeaks(totals)
     peakx = peakx[peakx != 1]
     peaky = totals[peakx]
-    ymax = np.max(peaky)*1.1 
+    ymax = np.max(peaky)
+    ylim = ymax * 1.1
     xmin = 0
     # from back to end find ysum > 0.001 * ymax 
-    for i, e in reversed(list(enumerate(totals))):
-        if e / ymax > 0.02: 
-            xmax = i
-            break
-    mat = mat[:,:xmax] 
+    exclude_last_col = True
+    if exclude_last_col:
+        for i, e in reversed(list(enumerate(totals[:-1]))):
+            if e / ymax > 0.01: 
+                xlim = i
+                break
+    else:
+        for i, e in reversed(list(enumerate(totals))):
+            if e / ymax > 0.01: 
+                xlim = i
+                break
+    mat = mat[:,:xlim] 
     nrow = mat.shape[0]
     ncol = mat.shape[1]
     # print (mat)
@@ -49,13 +57,13 @@ def spectra_plot(input_fl, out_fl, title):
         bottoms.append(np.add(bottoms[i], mat[i,:].tolist()).tolist())
     plt.figure(num=None, figsize=(width, height))
     # print (bottoms)
-    plt.axis([xmin, xmax, ymin, ymax])
+    plt.axis([0, xlim, 0, ylim])
     x = range(ncol)
     labs = [ "{}X".format(e) for e in range(nrow-1)]
     labs.append("{}X+".format(nrow-1)) 
     
     for i in range(nrow):
-        bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i], linewidth = 0.1, label = labs[i])
+        bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i], width = 1, label = labs[i])
         # bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i],label = labs[i])
     
     plt.title(title)

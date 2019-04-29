@@ -150,6 +150,7 @@ void usage()
 		 << "  -v - verbose mode (shows all parameter settings); default: false\n"
 		 << "  -k<len> - k-mer length (k from " << MIN_K << " to " << MAX_K << "; default: 25)\n"
 		 << "  -m<size> - max amount of RAM in GB (from 1 to 1024); default: 12\n"
+		 << "  -d<len> - trimmed-off bases; default: 0\n"
 		 << "  -sm - use strict memory mode (memory limit from -m<n> switch will not be exceeded)\n"
 		 << "  -p<par> - signature length (5, 6, 7, 8, 9, 10, 11); default: 9\n"
 		 << "  -f<a/q/m/bam> - input in FASTA format (-fa), FASTQ format (-fq), multi FASTA (-fm) or BAM (-fbam); default: FASTQ\n"	
@@ -227,7 +228,10 @@ bool parse_parameters(int argc, char *argv[])
 			}
 			else
 				Params.p_m = tmp;
-		}
+		} 
+		// Get trimmed length only works for one file
+		else if (strncmp(argv[i], "-d", 2) == 0)
+			Params.trim_n.push_back(atoi(&argv[i][2]));	
 		// Minimum counter threshold
 		else if (strncmp(argv[i], "-ci", 3) == 0)
 			Params.p_ci = atoi(&argv[i][3]);
@@ -365,37 +369,43 @@ bool parse_parameters(int argc, char *argv[])
 	if(argc - i < 3)
 		return false;
 	//dg: modified
-	string input_file_list = string(argv[i++]);
+	string input_file_name = string(argv[i++]);
 	Params.output_file_name = string(argv[i++]);
 	Params.working_directory = string(argv[i++]);
 	
 	Params.input_file_names.clear();
-	
-	ifstream in(input_file_list.c_str());
-	if(!in.good())
-	{
-		cerr << "Error: No " << input_file_list.c_str() << " file\n";
-		return false;
+	if(input_file_name[0] != '@') {
+		Params.input_file_names.push_back(input_file_name);
+		if (Params.trim_n.empty()) Params.trim_n.push_back(0); 
 	}
+	else
 	{
+		Params.trim_n.clear();
+		ifstream in(input_file_name.c_str()+1);
+		if(!in.good())
+		{
+			cerr << "Error: No " << input_file_name.c_str()+1 << " file\n";
+			return false;
+		}
+
 		string s;
 		while(getline(in, s))
 			if(s != "") {
-				//split by '\t'
 				size_t tab_p = s.find("\t");
 				if (tab_p == string::npos) {
 					Params.input_file_names.push_back(s.substr(0));
 					Params.trim_n.push_back(0);
 					//cerr << s<< endl;
 				} else {
-					cerr<<s.substr(0, tab_p) << s.substr(tab_p+1) << endl;	
+					//cerr<<s.substr(0, tab_p) << s.substr(tab_p+1) << endl;	
 					Params.input_file_names.push_back(s.substr(0, tab_p));
 					Params.trim_n.push_back(std::stoi(s.substr(tab_p+1)));
 				}
 			}
+
 		in.close();
 	}
-
+		
 	if (Params.p_t > Params.p_m * 64)
 	{
 		Params.p_t = Params.p_m * 64;
