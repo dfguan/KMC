@@ -301,7 +301,9 @@ class CAnalyzeOperation
 	uint64_t* occ_cnts;	
 	uint32_t max_cov;
 	uint32_t max_cov_asm;	
+	uint64_t shared_kmer_counter;
 	std::string output_fn;	
+		
 	void process_impl()
 	{
 		uint32 get1 = 0;
@@ -312,29 +314,35 @@ class CAnalyzeOperation
 		CKmer<SIZE> kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
 		uint32 counter1 = this->input1->data.kmers_with_counters[get1].counter;
 
+
 		uint32 left1 = this->input1->NRecLeft();
 		uint32 left2 = this->input2->NRecLeft();
-		
+
+
 		while (true)
 		{
 			if (kmer1 == kmer2)
 			{
+
 				uint32_t idx = counter1 >= max_cov ?  max_cov * (max_cov_asm + 1): counter1 * (max_cov_asm + 1);
 				uint32_t idx_rmd = counter2 >=  max_cov_asm? max_cov_asm : counter2; 
 				occ_cnts[idx + idx_rmd] += 1;
+				++shared_kmer_counter;
+	
 				++get1;
 				++get2;
-				
+
 				if (--left1)
 				{
 
 					kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
 					counter1 = this->input1->data.kmers_with_counters[get1].counter;
+
 				}
 				else
 				{
 					this->input1->data.get_pos = get1;
-					if (this->input1->Finished())
+					if (!this->input1->Finished())
 					{
 						get1 = 0;
 						kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
@@ -359,6 +367,7 @@ class CAnalyzeOperation
 						kmer2 = this->input2->data.kmers_with_counters[get2].kmer;
 						counter2 = this->input2->data.kmers_with_counters[get2].counter;
 						left2 = this->input2->NRecLeft();
+						
 					}
 					else
 						break;
@@ -366,10 +375,10 @@ class CAnalyzeOperation
 			}
 			else if (kmer1 < kmer2)
 			{
+
 				uint32_t idx = counter1 >= max_cov ?  (max_cov)* (max_cov_asm + 1): (counter1) * (max_cov_asm + 1);
 				uint32_t idx_rmd = 0; 
 				occ_cnts[idx + idx_rmd] += 1;
-				
 				++get1;
 				if (--left1)
 				{
@@ -379,7 +388,7 @@ class CAnalyzeOperation
 				else
 				{
 					this->input1->data.get_pos = get1;
-					if (this->input1->Finished())
+					if (!this->input1->Finished())
 					{
 						get1 = 0;
 						kmer1 = this->input1->data.kmers_with_counters[get1].kmer;
@@ -395,7 +404,6 @@ class CAnalyzeOperation
 				uint32_t idx = 0;
 				uint32_t idx_rmd = counter2 >=  max_cov_asm? max_cov_asm : counter2 ; 
 				occ_cnts[idx + idx_rmd] += 1;
-				
 				++get2;
 				if (--left2)
 				{
@@ -420,12 +428,12 @@ class CAnalyzeOperation
 		}
 		this->input1->data.get_pos = get1;
 		this->input2->data.get_pos = get2;
-	}	
-		
+	}
 	public:
 		CAnalyzeOperation(CBundle<SIZE> *_input1, CBundle<SIZE> *_input2, uint32_t _mc, uint32_t _mca, std::string fn): input1(_input1), input2(_input2), max_cov(_mc), max_cov_asm(_mca), output_fn(fn) {
 			occ_cnts = new uint64_t[(max_cov + 1)* (max_cov_asm + 1)];
-			memset(occ_cnts, 0, sizeof(uint64_t) * (max_cov+1) * (max_cov_asm+1));	
+			memset(occ_cnts, 0, sizeof(uint64_t) * (max_cov+1) * (max_cov_asm+1));
+			shared_kmer_counter = 0;	
 		}
 		void Process()	
 		{
@@ -467,6 +475,7 @@ class CAnalyzeOperation
 				//std::cout << '\n';	
 			}	
 			fclose(fp);
+			std::cerr <<"shared k-mers:" << shared_kmer_counter << std::endl;
 		}	
 		~CAnalyzeOperation() {
 			free(occ_cnts);
