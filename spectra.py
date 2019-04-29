@@ -30,7 +30,7 @@ def spectra_plot(input_fl, out_fl, title):
     
     totals = mat.sum(axis = 0)
     ymin = 0
-    peakx = findpeaks(mat)
+    peakx = findpeaks(totals)
     peakx = peakx[peakx != 1]
     peaky = totals[peakx]
     ymax = np.max(peaky)*1.1 
