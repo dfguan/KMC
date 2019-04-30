@@ -34,7 +34,7 @@ def spectra_plot(input_fl, out_fl, title):
     peakx = peakx[peakx != 1]
     peaky = totals[peakx]
     ymax = np.max(peaky)
-    ylim = ymax * 1.1
+    ylim = ymax * 1.5
     xmin = 0
     # from back to end find ysum > 0.001 * ymax 
     exclude_last_col = True
