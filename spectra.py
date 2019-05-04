@@ -11,12 +11,13 @@ def findpeaks(t):
     d[d == 0] = 1
     return np.where(np.diff(d) == -2)[0] + 1
 
-def spectra_plot(input_fl, out_fl, title):
-    title = title 
+def spectra_plot(input_fl, out_fl, prefix):
+    title = "stacked " + prefix + " k-mer comparison plot" 
+    title2 = prefix + " k-mer comparison plot"
     xlabel = "k-mer multiplicity"
     ylabel = "Number of distinct k-mers"
-    height = 6
-    width = 8
+    height = 12
+    width = 10 
     dpi = 300
     colors = ["#000000", "#ef2928", "#ad7fa8", "#8ae234", "#729fcf", "#f2c27e", "#fcaf3e", "#fce94f"]
     input_fp = open(input_fl)
@@ -57,11 +58,11 @@ def spectra_plot(input_fl, out_fl, title):
         bottoms.append(np.add(bottoms[i], mat[i,:].tolist()).tolist())
     plt.figure(num=None, figsize=(width, height))
     # print (bottoms)
-    plt.axis([0, xlim, 0, ylim])
     x = range(ncol)
     labs = [ "{}X".format(e) for e in range(nrow-1)]
     labs.append("{}X+".format(nrow-1)) 
-    
+    plt.subplot(2,1,1) 
+    plt.axis([0, xlim, 0, ylim])
     for i in range(nrow):
         bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i], width = 1, label = labs[i])
         # bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i],label = labs[i])
@@ -71,16 +72,32 @@ def spectra_plot(input_fl, out_fl, title):
     plt.ylabel(ylabel)
     plt.grid(True, color="black", alpha=0.2)
     plt.legend(loc = 1)
+
+    plt.subplot(2,1,2) 
+    plt.axis([0, xlim, 0, ylim])
+    for i in range(nrow):
+        bar = plt.bar(x, mat[i,:].tolist(), edgecolor=colors[i], color = 'None', width = 1, label = labs[i])
+    
+    plt.title(title2)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True, color="black", alpha=0.2)
+    plt.legend(loc = 1)
+
     plt.tight_layout()
 
     plt.savefig(output_file, dpi = dpi)
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        useage = "spectra.py <input_matrix> <output_png> [title]"
+        sys.exit(1)
+
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     if len(sys.argv) > 3:
         title = sys.argv[3]
     else:
-        title = "k-mer comparison plot"
+        title = ""
     spectra_plot(input_file, output_file, title)
