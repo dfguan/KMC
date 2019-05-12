@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
-import sys
+import sys, argparse
 
 #from kat tools script
 def findpeaks(t):
@@ -11,7 +11,7 @@ def findpeaks(t):
     d[d == 0] = 1
     return np.where(np.diff(d) == -2)[0] + 1
 
-def spectra_plot(input_fl, out_fl, prefix):
+def spectra_plot(ycut, xcut, input_fl, out_fl, prefix):
     title = "stacked " + prefix + " k-mer comparison plot" 
     title2 = prefix + " k-mer comparison plot"
     xlabel = "k-mer multiplicity"
@@ -35,18 +35,18 @@ def spectra_plot(input_fl, out_fl, prefix):
     peakx = peakx[peakx != 1]
     peaky = totals[peakx]
     ymax = np.max(peaky)
-    ylim = ymax * 1.5
+    ylim = ymax * ycut
     xmin = 0
     # from back to end find ysum > 0.001 * ymax 
     exclude_last_col = True
     if exclude_last_col:
         for i, e in reversed(list(enumerate(totals[:-1]))):
-            if e / ymax > 0.01: 
+            if e / ymax > xcut: 
                 xlim = i
                 break
     else:
         for i, e in reversed(list(enumerate(totals))):
-            if e / ymax > 0.01: 
+            if e / ymax > xcut: 
                 xlim = i
                 break
     mat = mat[:,:xlim] 
@@ -77,7 +77,8 @@ def spectra_plot(input_fl, out_fl, prefix):
     plt.axis([0, xlim, 0, ylim])
     for i in range(nrow):
         bar = plt.bar(x, mat[i,:].tolist(), edgecolor=colors[i], color = 'None', width = 1, label = labs[i])
-    
+    # for i in range(nrow):
+        # plt.plot(x, mat[i,:].tolist(), label = labs[i], color=colors[i])
     plt.title(title2)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -86,18 +87,17 @@ def spectra_plot(input_fl, out_fl, prefix):
 
     plt.tight_layout()
 
-    plt.savefig(output_file, dpi = dpi)
+    plt.savefig(out_fl, dpi = dpi)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        useage = "spectra.py <input_matrix> <output_png> [title]"
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Genome Comparison plot')
 
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
-    if len(sys.argv) > 3:
-        title = sys.argv[3]
-    else:
-        title = ""
-    spectra_plot(input_file, output_file, title)
+    parser.add_argument('-y', '--ycut', type=float, action="store", dest = "ycut", help ='set y axis limit to N times of ymax [1.5]', default = 1.5)
+    parser.add_argument('-x', '--xcut', type=float, action = "store", dest = "xcut", help = 'set x axis limit to where N times of ymax is [0.01]', default = 0.01)
+    parser.add_argument('-t', '--title', type = str, action = "store", dest = "title", help = 'figure title [NULL]', default="")
+    parser.add_argument('-v', '--version', action='version', version='spectra 0.0.0')
+    parser.add_argument('mat_fn', type=str, action="store", help = "matrix file")
+    parser.add_argument('png_fn', type=str, action="store", help = "output png file")
+    opts = parser.parse_args()
+    spectra_plot(opts.ycut, opts.xcut, opts.mat_fn, opts.png_fn, opts.title)
