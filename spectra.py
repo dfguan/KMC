@@ -75,10 +75,10 @@ def spectra_plot(ycut, xcut, input_fl, out_fl, prefix):
 
     plt.subplot(2,1,2) 
     plt.axis([0, xlim, 0, ylim])
-    for i in range(nrow):
-        bar = plt.bar(x, mat[i,:].tolist(), edgecolor=colors[i], color = 'None', width = 1, label = labs[i])
     # for i in range(nrow):
-        # plt.plot(x, mat[i,:].tolist(), label = labs[i], color=colors[i])
+        # bar = plt.bar(x, mat[i,:].tolist(), edgecolor=colors[i], color = 'None', width = 1, label = labs[i])
+    for i in range(nrow):
+        plt.plot(x, mat[i,:].tolist(), label = labs[i], color=colors[i])
     plt.title(title2)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
