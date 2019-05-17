@@ -15,7 +15,7 @@ Given an assembly and short read file list, you can use the following commands t
 
 ```
 bin/kmc -k21 -ci0 -fm -t12 -m20 -sm $asm $asm.prefix tmp
-bin/kmc -k21 -ci0 -t12 -m20 -sm $reads $reads.prefix tmp
+bin/kmc -k21 -ci0 -t12 -m20 -sm @$reads $reads.prefix tmp
 bin/kmc_tools analyze $reads.prefix $asm.prefix $output.matrix
 python3 spectra.py $output.matrix $output.png
 ```
@@ -24,9 +24,8 @@ when all the commands are finished, you will see a figure like this: ![kmc_plot.
 
 # Instruction
 
-1. How to make a read file list  
-	the read file list is a <tab> deliminated text file, each read file a line, following a simple syntax: \<READ\_FILE_PATH\>\<tab\>\[TRIM\_NUMBER\]. Please notice if the trim\_number is not set, it's treated as 0. If you only have one read file, you can use kmc without a read file list, and you can use ``-d`` to set trimmed off bases.
-	
+1.  How to make a read file list  
+the read file list is a ``<tab>`` deliminated text file, each read file a line, following a simple syntax: ``<READ_FILE_PATH><tab>[TRIM_NUMBER]``. Please notice if the TRIM\_NUMBER is not set, it will be treated as 0. If you only have one read file, you can use KMC command directly without a read file list, and you can use ``-d`` to set trimmed off bases.	
 	
 # Notice:
 This plot is just a small part learned from a K-mer Analysis Toolkit [(KAT)](https://github.com/TGAC/KAT). If you'd like to know more, please go to their website: [kat-web](http://www.earlham.ac.uk/kat-tools).
