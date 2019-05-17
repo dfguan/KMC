@@ -14,12 +14,12 @@ if you compile the source code sucessfully, there will be a bin directory includ
 Given an assembly and short read file list, you can use the following commands to make a comparison plot.
 
 ```
-bin/kmc -ci0 -fm -t12 $asm $asm.prefix tmp
-bin/kmc -ci0 -t12 -m20 $reads $reads.prefix tmp
+bin/kmc -k21 -ci0 -fm -t12 -m20 -sm $asm $asm.prefix tmp
+bin/kmc -k21 -ci0 -t12 -m20 -sm $reads $reads.prefix tmp
 bin/kmc_tools analyze $reads.prefix $asm.prefix $output.matrix
 python3 spectra.py $output.matrix $output.png
 ```
-when all the commands are finished, you will see a figure like this: ![kmc_plot.png]()
+when all the commands are finished, you will see a figure like this: ![kmc_plot.png](https://github.com/dfguan/purge_dups/blob/master/img/kmc_plot.png)
 
 
 # Instruction
