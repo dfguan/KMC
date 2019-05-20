@@ -1,4 +1,6 @@
 import numpy as np
+
+
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -11,13 +13,14 @@ def findpeaks(t):
     d[d == 0] = 1
     return np.where(np.diff(d) == -2)[0] + 1
 
-def spectra_plot(ycut, xcut, input_fl, out_fl, prefix):
-    title = "stacked " + prefix + " k-mer comparison plot" 
-    title2 = prefix + " k-mer comparison plot"
+def spectra_plot(ycut, xcut, input_fl, out_fl, prefix, isstk):
+    title = "stacked " if isstk else "" 
+    title += prefix + " k-mer comparison plot" 
+    # title2 = prefix + " k-mer comparison plot"
     xlabel = "k-mer multiplicity"
     ylabel = "Number of distinct k-mers"
-    height = 12
-    width = 10 
+    height = 6
+    width = 8 
     dpi = 300
     colors = ["#000000", "#ef2928", "#ad7fa8", "#8ae234", "#729fcf", "#f2c27e", "#fcaf3e", "#fce94f"]
     input_fp = open(input_fl)
@@ -61,29 +64,31 @@ def spectra_plot(ycut, xcut, input_fl, out_fl, prefix):
     x = range(ncol)
     labs = [ "{}X".format(e) for e in range(nrow-1)]
     labs.append("{}X+".format(nrow-1)) 
-    plt.subplot(2,1,1) 
+    # plt.subplot(2,1,1) 
     plt.axis([0, xlim, 0, ylim])
-    for i in range(nrow):
-        bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i], width = 1, label = labs[i])
-        # bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i],label = labs[i])
-    
+    if isstk:
+        for i in range(nrow):
+            bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i], width = 1, label = labs[i])
+            # bar = plt.bar(x, mat[i,:].tolist(), bottom = bottoms[i], edgecolor=colors[i], color = colors[i],label = labs[i])
+    else:
+        for i in range(nrow):
+            plt.plot(x, mat[i,:].tolist(), label = labs[i], color=colors[i])
+
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(True, color="black", alpha=0.2)
     plt.legend(loc = 1)
 
-    plt.subplot(2,1,2) 
-    plt.axis([0, xlim, 0, ylim])
+    # plt.subplot(2,1,2) 
+    # plt.axis([0, xlim, 0, ylim])
     # for i in range(nrow):
         # bar = plt.bar(x, mat[i,:].tolist(), edgecolor=colors[i], color = 'None', width = 1, label = labs[i])
-    for i in range(nrow):
-        plt.plot(x, mat[i,:].tolist(), label = labs[i], color=colors[i])
-    plt.title(title2)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.grid(True, color="black", alpha=0.2)
-    plt.legend(loc = 1)
+    # plt.title(title2)
+    # plt.xlabel(xlabel)
+    # plt.ylabel(ylabel)
+    # plt.grid(True, color="black", alpha=0.2)
+    # plt.legend(loc = 1)
 
     plt.tight_layout()
 
@@ -96,8 +101,9 @@ if __name__ == "__main__":
     parser.add_argument('-y', '--ycut', type=float, action="store", dest = "ycut", help ='set y axis limit to N times of ymax [1.5]', default = 1.5)
     parser.add_argument('-x', '--xcut', type=float, action = "store", dest = "xcut", help = 'set x axis limit to where N times of ymax is [0.01]', default = 0.01)
     parser.add_argument('-t', '--title', type = str, action = "store", dest = "title", help = 'figure title [NULL]', default="")
+    parser.add_argument('-s', '--stacked', action='store_true', dest="isstk", default=False)
     parser.add_argument('-v', '--version', action='version', version='spectra 0.0.0')
     parser.add_argument('mat_fn', type=str, action="store", help = "matrix file")
     parser.add_argument('png_fn', type=str, action="store", help = "output png file")
     opts = parser.parse_args()
-    spectra_plot(opts.ycut, opts.xcut, opts.mat_fn, opts.png_fn, opts.title)
+    spectra_plot(opts.ycut, opts.xcut, opts.mat_fn, opts.png_fn, opts.title, opts.isstk)
