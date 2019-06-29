@@ -13,7 +13,7 @@ def findpeaks(t):
     d[d == 0] = 1
     return np.where(np.diff(d) == -2)[0] + 1
 
-def spectra_plot(ycut, xcut, input_fl, out_fl, prefix, isstk):
+def spectra_plot(ycut, xcut, yflim, xflim, input_fl, out_fl, prefix, isstk):
     title = "stacked " if isstk else "" 
     title += prefix + " k-mer comparison plot" 
     # title2 = prefix + " k-mer comparison plot"
@@ -38,20 +38,22 @@ def spectra_plot(ycut, xcut, input_fl, out_fl, prefix, isstk):
     peakx = peakx[peakx != 1]
     peaky = totals[peakx]
     ymax = np.max(peaky)
-    ylim = ymax * ycut
+    ylim = ymax * ycut  if yflim == -1 else yflim
     xmin = 0
     # from back to end find ysum > 0.001 * ymax 
-    exclude_last_col = True
-    if exclude_last_col:
-        for i, e in reversed(list(enumerate(totals[:-1]))):
-            if e / ymax > xcut: 
-                xlim = i
-                break
-    else:
-        for i, e in reversed(list(enumerate(totals))):
-            if e / ymax > xcut: 
-                xlim = i
-                break
+    xlim = xflim 
+    if xlim == -1:
+        exclude_last_col = True
+        if exclude_last_col:
+            for i, e in reversed(list(enumerate(totals[:-1]))):
+                if e / ymax > xcut: 
+                    xlim = i
+                    break
+        else:
+            for i, e in reversed(list(enumerate(totals))):
+                if e / ymax > xcut: 
+                    xlim = i
+                    break
     mat = mat[:,:xlim] 
     nrow = mat.shape[0]
     ncol = mat.shape[1]
@@ -100,10 +102,12 @@ if __name__ == "__main__":
 
     parser.add_argument('-y', '--ycut', type=float, action="store", dest = "ycut", help ='set y axis limit to N times of ymax [1.5]', default = 1.5)
     parser.add_argument('-x', '--xcut', type=float, action = "store", dest = "xcut", help = 'set x axis limit to where N times of ymax is [0.01]', default = 0.01)
+    parser.add_argument('-Y', '--ymax', type=int, action = "store", dest = "ylim", help = 'set y axis limit [-1]', default = -1)
+    parser.add_argument('-X', '--xmax', type=int, action = "store", dest = "xlim", help = 'set x axis limit [-1]', default = -1)
     parser.add_argument('-t', '--title', type = str, action = "store", dest = "title", help = 'figure title [NULL]', default="")
     parser.add_argument('-s', '--stacked', action='store_true', dest="isstk", default=False)
     parser.add_argument('-v', '--version', action='version', version='spectra 0.0.0')
     parser.add_argument('mat_fn', type=str, action="store", help = "matrix file")
     parser.add_argument('png_fn', type=str, action="store", help = "output png file")
     opts = parser.parse_args()
-    spectra_plot(opts.ycut, opts.xcut, opts.mat_fn, opts.png_fn, opts.title, opts.isstk)
+    spectra_plot(opts.ycut, opts.xcut, opts.ylim, opts.xlim, opts.mat_fn, opts.png_fn, opts.title, opts.isstk)

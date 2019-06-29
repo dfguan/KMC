@@ -11,7 +11,7 @@ if you compile the source code sucessfully, there will be a bin directory includ
 
 # Quick Start
 
-Given an assembly and short read file list, you can use the following commands to make a comparison plot.
+Given an assembly in fasta/fasta.gz format and list of short reads files in fastq/fastq.gz format, you can use the following commands to make a comparison plot.
 
 ```
 bin/kmc -k21 -ci0 -fm -t12 -m20 -sm $asm $asm.prefix tmp
@@ -24,8 +24,8 @@ when all the commands are finished, you will see a figure like this: ![kmc_plot.
 
 # Instruction
 
-1.  How to make a read file list  
-the read file list is a ``<tab>`` deliminated text file, each read file a line, following a simple syntax: ``<READ_FILE_PATH><tab>[TRIM_NUMBER]``. Please notice if the TRIM\_NUMBER is not set, it will be treated as 0. If you only have one read file, you can use KMC command directly without a read file list, and you can use ``-d`` to set trimmed off bases.	
+1.  How to make a list of short reads files (fastq/fastq.gz) 
+the read file list is a ``<tab>`` deliminated text file, one read file per line, following a simple syntax: ``<READ_FILE_PATH><tab>[TRIM_NUMBER]``. Please notice if the TRIM\_NUMBER is not set, it will be treated as 0. If you only have one read file, you can use KMC command directly without a read file list, and you can use ``-d`` to set trimmed off bases.	
 	
 # Notice:
 This plot is just a small part learned from a K-mer Analysis Toolkit [(KAT)](https://github.com/TGAC/KAT). If you'd like to know more, please go to their website: [kat-web](http://www.earlham.ac.uk/kat-tools).
